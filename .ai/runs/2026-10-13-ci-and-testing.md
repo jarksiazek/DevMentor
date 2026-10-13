@@ -26,6 +26,11 @@
 - `npm run lint` ✅, `npm run typecheck` ✅, `npm test` ✅ (139 tests, 100%), `env -u NODE_ENV npm run build` ✅, `INTEGRATION_DATABASE_URL=… npm run test:integration` ✅ (6 tests).
 - Not verified locally: the testcontainers path (no Docker here); covered by the CI `integration` job.
 
+## Verification (CI)
+
+- PR #2, run 38412794771: lint, typecheck, unit, build, integration (testcontainers + agent-browser) all ✅ on the first run.
+- Throwaway cluster `/tmp/devmentor-it-pg` stopped and removed.
+
 ## Follow-ups (found while writing tests, not fixed here)
 
 - `core/src/logger.ts`: `redact` stops at depth 5 and returns deeper values unredacted, so a `password` nested deeper than that is logged in clear text. Security fix + test should flip the current depth-limit test.

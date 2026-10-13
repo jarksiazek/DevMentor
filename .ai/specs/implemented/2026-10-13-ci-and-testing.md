@@ -56,7 +56,7 @@ Everything else, including the shadcn primitives in `ui/src/components/ui/`, pag
 
 ## Acceptance criteria
 
-- [ ] All five CI jobs exist and pass on the PR.
-- [ ] `npm test` enforces 100% coverage and passes.
-- [ ] `npm run test:integration` passes locally (via `INTEGRATION_DATABASE_URL`) and in CI (testcontainers).
-- [ ] `AGENTS.md` makes 100% unit coverage for every new feature mandatory and documents both suites.
+- [x] All five CI jobs exist and pass on the PR.
+- [x] `npm test` enforces 100% coverage and passes.
+- [x] `npm run test:integration` passes locally (via `INTEGRATION_DATABASE_URL`) and in CI (testcontainers).
+- [x] `AGENTS.md` makes 100% unit coverage for every new feature mandatory and documents both suites.
