@@ -45,6 +45,7 @@ Status: implemented (2026-10-13, run log `.ai/runs/2026-10-13-engineering-standa
 >   repository, so step 8 of §5 is still open.
 > - Tests use `node:test` (`npm test`) and run on Node's native TypeScript stripping, with no new
 >   dependency.
+>   Superseded on 2026-10-13 by Vitest with a 100% coverage gate: see `2026-10-13-ci-and-testing.md`.
 
 Grounded in the actual bootstrap  and the target
 product scope (`devmentor-training-pack-first-idea`: ~9 domain concepts — auth,

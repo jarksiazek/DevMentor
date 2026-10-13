@@ -11,8 +11,7 @@
     "./hooks/*": "./src/hooks/*.ts"
   },
   "scripts": {
-    "typecheck": "tsc",
-    "test": "node --test \"src/**/*.test.ts\""
+    "typecheck": "tsc"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

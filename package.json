@@ -15,15 +15,23 @@
     "start": "npm run start -w @devmentor/app --",
     "lint": "eslint",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run --coverage --project core --project db --project ui --project app",
+    "test:watch": "vitest --project core --project db --project ui --project app",
+    "test:integration": "vitest run --project integration",
     "db:migration:create": "npm run migration:create -w @devmentor/db --",
     "db:migrate": "npm run migrate -w @devmentor/db",
     "db:migrate:down": "npm run migrate:down -w @devmentor/db"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "^24",
+    "@vitest/coverage-v8": "^5.0.4",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
-    "typescript": "~6.0.3"
+    "jsdom": "^30.1.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.4"
   }
 }
