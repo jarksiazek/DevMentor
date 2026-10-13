@@ -3,6 +3,8 @@
 - **Date**: 2026-10-13
 - **Status**: Implemented (2026-10-13)
 
+> **Update 2026-10-13**: the admin pages moved from `(backend)/backend/` (URL `/backend`) to `(admin)/admin/` (URL `/admin`), with `admin.css`. The `@devmentor/ui/backend/*` library path is unchanged.
+
 ## Goal
 
 Turn the single Next.js starter into the DevMentor monorepo with the agreed stack, so later features land in a predictable place.

@@ -7,6 +7,7 @@ Status: implemented (2026-10-13, run log `.ai/runs/2026-10-13-engineering-standa
 > When it was implemented, it was reconciled with the repo as it actually is. Where the text below
 > still says otherwise, these notes and `AGENTS.md` win:
 >
+> - **Update 2026-10-13**: admin pages are now `(admin)/admin/page.tsx` (URL `/admin`); `/backend` below is the old path.
 > - Pages/groups: the demo `admin/users` page is `(backend)/backend/page.tsx` (URL `/backend`). Its
 >   users list goes through `apiCall` → `/api/users` (`makeCrudRoute`) → `DataTable`/`CrudForm`.
 >   The persona route groups in §2/§4 (`(marketing)`, `(auth)`, `(student)`, `(mentor)`) are a

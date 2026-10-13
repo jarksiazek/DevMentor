@@ -10,7 +10,7 @@ describe("admin panel", () => {
 
   beforeAll(async () => {
     browser = openBrowser(baseUrl, "admin");
-    await browser.open("/backend");
+    await browser.open("/admin");
   });
 
   afterAll(async () => {
@@ -18,7 +18,7 @@ describe("admin panel", () => {
   });
 
   it("renders the dashboard shell", async () => {
-    assert.equal(await browser.title(), "Dashboard · DevMentor backend");
+    assert.equal(await browser.title(), "Dashboard · DevMentor admin");
     assert.equal(await browser.text("h1"), "Dashboard");
     await browser.waitForText("System status and users.");
   });

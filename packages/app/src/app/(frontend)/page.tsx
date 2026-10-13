@@ -29,10 +29,10 @@ export default function HomePage() {
           DevMentor connects developers with experienced engineers for focused, practical mentoring.
         </p>
         <Link
-          href="/backend"
+          href="/admin"
           className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
         >
-          Open the backend
+          Open the admin panel
         </Link>
       </section>
 

@@ -43,8 +43,8 @@ Everything else, including the shadcn primitives in `ui/src/components/ui/`, pag
 
 ## Integration scope (initial)
 
-- Home page: renders the hero heading, feature cards and the "Open the backend" link, and the link navigates to `/backend`.
-- Admin panel (`/backend`): header, "Dashboard" heading, the PostgreSQL status card reports **Connected** (proves the app reaches the container DB), and the Users panel **fails closed** with "Authentication required". `next start` runs with `NODE_ENV=production`, where `requireSession` answers 401 until the auth concept exists. Extend this to a CRUD flow once auth lands.
+- Home page: renders the hero heading, feature cards and the "Open the admin panel" link, and the link navigates to `/admin`.
+- Admin panel (`/admin`): header, "Dashboard" heading, the PostgreSQL status card reports **Connected** (proves the app reaches the container DB), and the Users panel **fails closed** with "Authentication required". `next start` runs with `NODE_ENV=production`, where `requireSession` answers 401 until the auth concept exists. Extend this to a CRUD flow once auth lands.
 
 ## CI jobs (all on Node 24, `npm ci`)
 

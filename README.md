@@ -14,7 +14,7 @@ npm run dev                   # http://localhost:3000
 ```
 
 - `/`: public frontend (Tailwind CSS)
-- `/backend`: admin backend (shadcn-ui)
+- `/admin`: admin panel (shadcn-ui)
 - `/api/health`: health check. Returns `200` when the database is reachable, `503` otherwise.
 
 Shell environment variables take precedence over `.env` files. If your shell already exports `DATABASE_URL` or `NODE_ENV`, override or unset them, e.g. `env -u NODE_ENV npm run build`.
@@ -53,7 +53,7 @@ Shell environment variables take precedence over `.env` files. If your shell alr
 │   ├── app/    @devmentor/app   Next.js app: the main integration package
 │   │   └── src/
 │   │       ├── app/(frontend)/        public pages (Tailwind), root layout #1
-│   │       ├── app/(backend)/backend/ admin pages (shadcn-ui), root layout #2
+│   │       ├── app/(admin)/admin/     admin pages (shadcn-ui), root layout #2
 │   │       ├── app/api/<concept>/     Route Handlers (apiHandler / makeCrudRoute)
 │   │       └── server/container.ts    withRequestScope() for Server Components/Actions
 │   ├── core/   @devmentor/core
@@ -114,12 +114,12 @@ Pages that query the database call `await connection()` first, so they render pe
 - The CLI config is `packages/db/src/mikro-orm.config.ts`. It shares the runtime options from `config.ts` and adds the Migrator.
 - Workflow: change an entity → `npm run db:migration:create` → review the file → `npm run db:migrate`.
 
-### Frontend vs. backend UI
+### Frontend vs. admin UI
 
-The public site and the admin backend are separate route groups with their own root layouts and stylesheets:
+The public site and the admin panel are separate route groups with their own root layouts and stylesheets:
 
 - `(frontend)`: `frontend.css` contains Tailwind only. Pages use utility classes directly.
-- `(backend)`: `backend.css` contains Tailwind plus the shadcn theme from `@devmentor/ui/styles.css`. Pages compose shadcn primitives from `@devmentor/ui/components/ui/*` and the shared building blocks from `@devmentor/ui/backend/*`.
+- `(admin)`: `admin.css` contains Tailwind plus the shadcn theme from `@devmentor/ui/styles.css`. Pages compose shadcn primitives from `@devmentor/ui/components/ui/*` and the shared building blocks from `@devmentor/ui/backend/*`.
 
 To add more shadcn components, run `npx shadcn@latest add <component>` inside `packages/ui`.
 
