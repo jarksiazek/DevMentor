@@ -23,6 +23,7 @@ DevMentor is an npm-workspaces monorepo. These decisions are fixed; changing any
 | Frontend (public) pages | Tailwind CSS 4 utilities | CSS-in-JS, other CSS frameworks |
 | Backend (admin) pages | shadcn-ui components from `@devmentor/ui` | Other component libraries |
 | Package manager | npm workspaces (`packages/*`) | pnpm/yarn, nested lockfiles |
+| Tests | Vitest + `@vitest/coverage-v8`, Testing Library (`jsdom`); integration: `@testcontainers/postgresql` + `agent-browser` | Jest, `node:test`, Playwright/Cypress runners |
 
 TypeScript is pinned to `~6.0.x` because typescript-eslint supports `<6.1.0`. Do not bump it until typescript-eslint does.
 
@@ -98,9 +99,19 @@ Each new reusable component has one designated home:
 
 - All `.env*` files live in the repo root. `.env.example` documents the variables; copy it to `.env` or `.env.local`. Both Next.js and the MikroORM CLI read them through `@next/env`.
 - Shell variables override `.env` files. In this sandbox the shell exports a foreign `DATABASE_URL` and `NODE_ENV=development`, so pass them explicitly, e.g. `DATABASE_URL=… npm run db:migrate` and `env -u NODE_ENV npm run build`. See `.ai/lessons.md`.
-- Run these from the repo root: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run db:migration:create`, `npm run db:migrate`, `npm run db:migrate:down`.
-- Tests use the built-in `node:test` runner (`src/**/*.test.ts` in `core` and `ui`, run on Node's native type stripping). Behavior changes and bug fixes ship with a test that fails without them.
-- Definition of done for code changes: `npm run typecheck`, `npm run lint`, `npm test` and `npm run build` pass. Schema changes also include a migration that has been applied locally.
+- Run these from the repo root: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:watch`, `npm run test:integration`, `npm run db:migration:create`, `npm run db:migrate`, `npm run db:migrate:down`.
+- Definition of done for code changes: `npm run typecheck`, `npm run lint`, `npm test` (100% coverage) and `npm run build` pass, plus `npm run test:integration` when pages, routes or the schema change. Schema changes also include a migration that has been applied locally. CI (`.github/workflows/ci.yml`) runs all of these on every pull request and must be green before merging.
+
+## Testing (MANDATORY)
+
+Spec: `.ai/specs/implemented/2026-10-13-ci-and-testing.md`.
+
+- **Every new feature and every change ships with unit tests that keep coverage at 100%** (lines, branches, functions and statements) for all of `packages/*/src`. `npm test` fails below 100%, and so does CI. Never lower the thresholds, add `/* v8 ignore */` comments or widen the coverage `exclude` list to get green; the only exclusions are generated migrations, test files and `.d.ts`. If code cannot be covered, change its design (inject the dependency) instead.
+- Tests assert behavior, not just execution. Bug fixes ship with a regression test that fails without the fix.
+- Unit tests sit next to the code as `src/**/<name>.test.ts(x)` and run in the Vitest project of their package (`core`, `db`: `node`; `ui`, `app`: `jsdom` with Testing Library and jest-dom). Configuration is in the root `vitest.config.ts`. Mocks are restored after every test.
+- Unit tests never touch a real database or network: fake the `em`/services, pass fakes through `createScope`, and use `vi.mock` for `@devmentor/db` or `@mikro-orm/*`.
+- Integration tests live in `packages/app/integration/*.test.ts`. `globalSetup.ts` starts PostgreSQL with testcontainers, runs the migrations, starts the production build with `next start`, and provides `inject("baseUrl")`. Drive pages through `openBrowser()` (`integration/browser.ts`, a wrapper around the `agent-browser` CLI). Every new page or user flow adds an integration test.
+- Running integration tests locally: `npm run build` first, and Docker for testcontainers. Without Docker, set `INTEGRATION_DATABASE_URL` to a throwaway database that you created. Never point it at a shared one. Chrome comes from `npx agent-browser install` (add `--with-deps` on a fresh Linux).
 
 # `.ai` metadata structure (MANDATORY)
 

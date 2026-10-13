@@ -8,8 +8,7 @@
     "./validators/*": "./src/validators/*.ts"
   },
   "scripts": {
-    "typecheck": "tsc",
-    "test": "node --test \"src/**/*.test.ts\""
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@devmentor/db": "*",

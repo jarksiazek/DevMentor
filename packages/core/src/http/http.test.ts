@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
 
 import { asValue, createContainer, InjectionMode } from "awilix";
 
@@ -7,10 +7,10 @@ import type { AppContainer, Cradle } from "../container/container.ts";
 import { userInputSchema } from "../validators/auth/user-input.schema.ts";
 import { paginationQuerySchema } from "../validators/pagination.schema.ts";
 
-import { apiHandler } from "./apiHandler.ts";
-import { assertOwns, requireRole, requireSession, type Session } from "./auth.ts";
+import { apiHandler, errorResponse } from "./apiHandler.ts";
+import { assertOwns, requireAdmin, requireRole, requireSession, type Session } from "./auth.ts";
 import { CSRF_HEADER } from "./envelope.ts";
-import { ConflictError, UnauthorizedError } from "./errors.ts";
+import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from "./errors.ts";
 import { makeCrudItemRoute, makeCrudRoute } from "./makeCrudRoute.ts";
 
 const USER_ID = "8f7b5b3e-3c1a-4c55-9d7e-2b8f0f6a1c11";
@@ -51,8 +51,8 @@ describe("apiHandler", () => {
     assert.deepEqual(await response.json(), { ok: false, error: { code: "conflict", message: "taken" } });
   });
 
-  it("hides unexpected errors behind a generic 500", async (t) => {
-    t.mock.method(console, "error", () => {});
+  it("hides unexpected errors behind a generic 500", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const GET = apiHandler(async () => {
       throw new Error("password=hunter2 at db.internal:5432");
     }, { createScope: fakeScope({}) });
@@ -75,8 +75,8 @@ describe("apiHandler", () => {
     assert.equal(scopes, 0);
   });
 
-  it("answers 503 when the container cannot be built", async (t) => {
-    t.mock.method(console, "error", () => {});
+  it("answers 503 when the container cannot be built", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const GET = apiHandler(async () => "never", {
       createScope: async () => {
         throw new Error("DATABASE_URL is not set");
@@ -84,6 +84,35 @@ describe("apiHandler", () => {
     });
     const response = await GET(request("GET", "/api/x"), noParams);
     assert.equal(response.status, 503);
+  });
+});
+
+describe("errorResponse", () => {
+  it("includes field errors for ValidationError", async () => {
+    const response = errorResponse(new ValidationError("Invalid input", { email: ["bad"] }));
+    assert.equal(response.status, 422);
+    assert.deepEqual(await response.json(), {
+      ok: false,
+      error: { code: "validation_error", message: "Invalid input", fieldErrors: { email: ["bad"] } },
+    });
+  });
+
+  it("logs unexpected errors without request details when there is no request", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = errorResponse(new Error("boom"));
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), { ok: false, error: { code: "internal_error", message: "Internal server error" } });
+    const line = JSON.parse(String(errors.mock.calls[0][0]));
+    assert.equal(line.method, undefined);
+    assert.equal(line.path, undefined);
+  });
+
+  it("logs method and path when the request is known", () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    errorResponse(new Error("boom"), request("DELETE", "/api/users/1?x=1"));
+    const line = JSON.parse(String(errors.mock.calls[0][0]));
+    assert.equal(line.method, "DELETE");
+    assert.equal(line.path, "/api/users/1");
   });
 });
 
@@ -160,6 +189,35 @@ describe("makeCrudRoute", () => {
     assert.equal(response.status, 405);
   });
 
+  it("answers 405 for a list that is not configured", async () => {
+    const route = makeCrudRoute({ service: "userService", authorize: allowAdmin, createScope });
+    const response = await route.GET(request("GET", "/api/users"), noParams);
+    assert.equal(response.status, 405);
+    assert.deepEqual(await response.json(), {
+      ok: false,
+      error: { code: "method_not_allowed", message: "Method not allowed" },
+    });
+  });
+
+  it("passes a null session to public routes", async () => {
+    const sessions: unknown[] = [];
+    const route = makeCrudRoute({
+      service: "userService",
+      authorize: "public",
+      createScope,
+      list: {
+        query: paginationQuerySchema,
+        run: async (_users, _query, context) => {
+          sessions.push(context.session);
+          return [];
+        },
+      },
+    });
+    const response = await route.GET(request("GET", "/api/users"), noParams);
+    assert.equal(response.status, 200);
+    assert.deepEqual(sessions, [null]);
+  });
+
   it("treats a non-UUID id as not found", async () => {
     const item = makeCrudItemRoute({
       service: "userService",
@@ -173,6 +231,98 @@ describe("makeCrudRoute", () => {
       params: Promise.resolve({ id: USER_ID }),
     });
     assert.deepEqual(await found.json(), { ok: true, data: { id: USER_ID } });
+  });
+});
+
+describe("makeCrudItemRoute", () => {
+  const calls: unknown[] = [];
+  const userService = {
+    update: async (id: string, input: unknown) => {
+      calls.push(["update", id, input]);
+      return { id, ...(input as object) };
+    },
+    delete: async (id: string) => {
+      calls.push(["delete", id]);
+      return { id };
+    },
+  };
+  const createScope = fakeScope({ userService: userService as unknown as Cradle["userService"] });
+  const params = { params: Promise.resolve({ id: USER_ID }) };
+
+  afterEach(() => {
+    calls.length = 0;
+  });
+
+  const item = makeCrudItemRoute({
+    service: "userService",
+    authorize: allowAdmin,
+    createScope,
+    update: { body: userInputSchema, run: (users, id, input) => users.update(id, input) },
+    remove: { run: (users, id) => users.delete(id) },
+  });
+
+  it("updates from the parsed body", async () => {
+    const response = await item.PUT(request("PUT", `/api/users/${USER_ID}`, { name: "Ada", email: "A@B.co", x: 1 }), params);
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls, [["update", USER_ID, { name: "Ada", email: "a@b.co" }]]);
+  });
+
+  it("rejects an invalid update body without calling the service", async () => {
+    const response = await item.PUT(request("PUT", `/api/users/${USER_ID}`, { name: "" }), params);
+    assert.equal(response.status, 422);
+    assert.deepEqual(calls, []);
+  });
+
+  it("checks the id before reading the update body", async () => {
+    const response = await item.PUT(request("PUT", "/api/users/1", "{not json"), { params: Promise.resolve({ id: "1" }) });
+    assert.equal(response.status, 404);
+  });
+
+  it("deletes by id", async () => {
+    const response = await item.DELETE(request("DELETE", `/api/users/${USER_ID}`), params);
+    assert.deepEqual(await response.json(), { ok: true, data: { id: USER_ID } });
+    assert.deepEqual(calls, [["delete", USER_ID]]);
+  });
+
+  it("maps service errors on delete", async () => {
+    const route = makeCrudItemRoute({
+      service: "userService",
+      authorize: allowAdmin,
+      createScope,
+      remove: {
+        run: async () => {
+          throw new NotFoundError("User not found");
+        },
+      },
+    });
+    const response = await route.DELETE(request("DELETE", `/api/users/${USER_ID}`), params);
+    assert.equal(response.status, 404);
+  });
+
+  it("denies before touching the id or body when authorize throws", async () => {
+    const route = makeCrudItemRoute({
+      service: "userService",
+      authorize: async () => {
+        throw new UnauthorizedError();
+      },
+      createScope,
+      update: { body: userInputSchema, run: (users, id, input) => users.update(id, input) },
+    });
+    const response = await route.PUT(request("PUT", "/api/users/1", "{not json"), { params: Promise.resolve({ id: "1" }) });
+    assert.equal(response.status, 401);
+    assert.deepEqual(calls, []);
+  });
+
+  it("answers 405 for every item operation that is not configured", async () => {
+    const route = makeCrudItemRoute({ service: "userService", authorize: allowAdmin, createScope });
+    for (const [method, handler] of [
+      ["GET", route.GET],
+      ["PUT", route.PUT],
+      ["DELETE", route.DELETE],
+    ] as const) {
+      const response = await handler(request(method, `/api/users/${USER_ID}`, method === "PUT" ? {} : undefined), params);
+      assert.equal(response.status, 405, method);
+    }
   });
 });
 
@@ -190,6 +340,13 @@ describe("auth", () => {
   it("returns the identity-less development session outside production", async () => {
     process.env.NODE_ENV = "development";
     assert.deepEqual(await requireSession(request("GET", "/")), { userId: null, roles: ["admin"] });
+  });
+
+  it("requireAdmin accepts the development admin and fails closed in production", async () => {
+    process.env.NODE_ENV = "development";
+    assert.deepEqual(await requireAdmin(request("GET", "/")), { userId: null, roles: ["admin"] });
+    process.env.NODE_ENV = "production";
+    await assert.rejects(requireAdmin(request("GET", "/")), UnauthorizedError);
   });
 
   it("checks roles and ownership", () => {
