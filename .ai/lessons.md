@@ -20,6 +20,7 @@ Long-term memory for LLM agents working in this repository. Read this file befor
 
 <!-- Newest first. -->
 
+- **2026-10-13 — Preview 500 after restructure = stale dev server**: the sandbox preview on :3000 keeps running the process it started with; after moving the app to `packages/app` it kept serving from `/workspace` (`scandir '/workspace/src/app'`). Read `.next/dev/logs/next-development.log` (root and `packages/app`), then `fuser -k 3000/tcp`; the supervisor respawns it from `openmercato.toml`.
 - **2026-10-13 — Zod 4 runs checks in order**: `z.email().trim()` validates the email *before* trimming, so `" a@b.co "` fails. Normalize first: `z.string().trim().toLowerCase().pipe(z.email())`.
 - **2026-10-13 — Tests run on `node --test` with no TS tooling**: Node 24 strips types natively, and workspace packages resolve through their realpath (not `node_modules`), so `core`/`ui` tests import `.ts` sources directly. Avoid TS-only runtime syntax (enums, parameter properties) in code under test. Inject fakes through `createScope` options instead of module mocking.
 - **2026-10-13 — shadcn CLI `cn` rewrite recurs**: it happened again on `shadcn add input label` (2nd time). Always grep `from "cn"` after any `shadcn add`.
