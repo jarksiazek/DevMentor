@@ -20,4 +20,11 @@ Long-term memory for LLM agents working in this repository. Read this file befor
 
 <!-- Newest first. -->
 
-_No lessons recorded yet._
+- **2026-10-13 — Zod 4 runs checks in order**: `z.email().trim()` validates the email *before* trimming, so `" a@b.co "` fails. Normalize first: `z.string().trim().toLowerCase().pipe(z.email())`.
+- **2026-10-13 — Tests run on `node --test` with no TS tooling**: Node 24 strips types natively, and workspace packages resolve through their realpath (not `node_modules`), so `core`/`ui` tests import `.ts` sources directly. Avoid TS-only runtime syntax (enums, parameter properties) in code under test. Inject fakes through `createScope` options instead of module mocking.
+- **2026-10-13 — shadcn CLI `cn` rewrite recurs**: it happened again on `shadcn add input label` (2nd time). Always grep `from "cn"` after any `shadcn add`.
+- **2026-10-13 — shadcn CLI may import `cn` from npm**: after `shadcn add` in `packages/ui`, check that components import `cn` from `@devmentor/ui/lib/utils`. The CLI rewrote it to the unrelated npm package `cn` and added it to dependencies.
+- **2026-10-13 — Sandbox `NODE_ENV=development` breaks `next build`**: it fails prerendering `/_global-error` with `Cannot read properties of null (reading 'useContext')`. Build with `env -u NODE_ENV npm run build`.
+- **2026-10-13 — `@next/env` in the monorepo**: use `forceReload` in `next.config.ts`; named import in CJS-compiled config, default import under native ESM. ([details](lessons/2026-10-13-next-env-in-monorepo.md))
+- **2026-10-13 — `pkill -f '<pattern>'` can kill your own shell**: the pattern also matches the invoking command line. Free ports with `fuser -k <port>/tcp` instead.
+- **2026-10-13 — Shell `DATABASE_URL` beats `.env`**: the sandbox exports a foreign `DATABASE_URL`; `.env` never overrides it. Always set `DATABASE_URL` explicitly for DB commands. ([details](lessons/2026-10-13-sandbox-database-url.md))

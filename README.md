@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DevMentor
 
-## Getting Started
+DevMentor is a mentoring platform for software developers. This repository is an npm-workspaces monorepo built on Next.js 16, React 19 and TypeScript, with PostgreSQL behind MikroORM and Awilix for dependency injection.
 
-First, run the development server:
+## Getting started
+
+Requirements: Node.js ≥ 22.17, npm, and a PostgreSQL server you can reach.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env          # then point DATABASE_URL at your database
+npm run db:migrate            # apply migrations
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `/`: public frontend (Tailwind CSS)
+- `/backend`: admin backend (shadcn-ui)
+- `/api/health`: health check. Returns `200` when the database is reachable, `503` otherwise.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Shell environment variables take precedence over `.env` files. If your shell already exports `DATABASE_URL` or `NODE_ENV`, override or unset them, e.g. `env -u NODE_ENV npm run build`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts (run from the repo root)
 
-## Learn More
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Next.js dev server (Turbopack). Extra args are passed through: `npm run dev -- --port 3001` |
+| `npm run build` / `npm run start` | Production build / server |
+| `npm run lint` | ESLint over the whole monorepo |
+| `npm run typecheck` | `tsc` in every workspace |
+| `npm test` | Unit tests (`node:test`) in every workspace |
+| `npm run db:migration:create` | Generate a migration from entity changes |
+| `npm run db:migrate` / `npm run db:migrate:down` | Apply / roll back migrations |
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Concern | Technology |
+| --- | --- |
+| Web framework | Next.js 16 (App Router, Turbopack), React 19, TypeScript (strict) |
+| Database | PostgreSQL |
+| ORM | MikroORM 7: entities via `defineEntity`, migrations, built-in connection pooling |
+| Dependency injection | Awilix (PROXY injection mode, strict mode) |
+| Public frontend styling | Tailwind CSS 4 |
+| Admin backend UI | shadcn-ui (Radix UI + Tailwind) |
+| Monorepo | npm workspaces |
 
-## Deploy on Vercel
+### Repository layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+.
+├── packages/
+│   ├── app/    @devmentor/app   Next.js app: the main integration package
+│   │   └── src/
+│   │       ├── app/(frontend)/        public pages (Tailwind), root layout #1
+│   │       ├── app/(backend)/backend/ admin pages (shadcn-ui), root layout #2
+│   │       ├── app/api/<concept>/     Route Handlers (apiHandler / makeCrudRoute)
+│   │       └── server/container.ts    withRequestScope() for Server Components/Actions
+│   ├── core/   @devmentor/core
+│   │   └── src/
+│   │       ├── container/             Awilix container + Cradle
+│   │       ├── services/<concept>/    domain services
+│   │       ├── validators/<concept>/  Zod schemas shared by routes and forms
+│   │       ├── http/                  errors, apiHandler, makeCrudRoute, auth
+│   │       └── events/                typed in-process event bus
+│   ├── db/     @devmentor/db    MikroORM config, entities/<concept>/, migrations
+│   └── ui/     @devmentor/ui
+│       └── src/
+│           ├── components/ui/         shadcn primitives (CLI only)
+│           └── backend/               apiCall, CrudForm, DataTable, feedback states
+├── .ai/                         AI-agent specs, run logs, lessons (see AGENTS.md)
+├── .env.example                 documented environment variables
+├── eslint.config.mjs            lint config for all packages
+└── tsconfig.base.json           shared compiler options
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Package dependencies
+
+```
+            ┌──────────────────┐
+            │  @devmentor/app  │  routes, pages, API, composition
+            └───┬─────────┬────┘
+                │         │
+                ▼         ▼
+ ┌─────────────────┐   ┌────────────────┐
+ │ @devmentor/core │   │ @devmentor/ui  │
+ │ services + DI   │   │ shadcn-ui      │
+ └────────┬────────┘   └────────────────┘
+          ▼
+ ┌─────────────────┐
+ │  @devmentor/db  │──▶ PostgreSQL
+ │  MikroORM       │
+ └─────────────────┘
+```
+
+Dependencies point inward only. `db` and `ui` know nothing about the other packages, and nothing imports `app`. Workspace packages export their TypeScript source directly (no build step); Next.js/Turbopack transpiles them.
+
+Domain code is organized by concept (`auth`, `bookings`, …): the same sub-folder name repeats in `db`, `core`, `app` and `ui`. Naming, layering and security rules are in `.ai/specs/implemented/2026-09-01-engineering-standards.md`.
+
+### Request flow
+
+1. A Route Handler is wrapped in `apiHandler` (or built by `makeCrudRoute`), which opens a request scope, validates input with the shared Zod schema, and returns a `{ ok, data }` / `{ ok: false, error }` envelope. Server Components and Server Actions call `withRequestScope(cradle => …)` instead. Client components talk to `/api/*` only through `apiCall`.
+2. That creates a child scope of the process-wide Awilix container (`@devmentor/core`).
+3. The scope resolves `em`, a fresh fork of the MikroORM `EntityManager` with its own identity map, and the scoped services that depend on it, e.g. `userService`.
+4. The process-wide ORM (`getOrm()` in `@devmentor/db`) owns one PostgreSQL connection pool, sized by `DATABASE_POOL_MIN`/`DATABASE_POOL_MAX`. The ORM and the container are cached on `globalThis`, so dev-server hot reloads don't open new pools.
+5. The scope is disposed when the work finishes.
+
+Pages that query the database call `await connection()` first, so they render per request and never during `next build`.
+
+### Database and migrations
+
+- Entities: `packages/db/src/entities/<concept>/<name>.entity.ts`, registered in `entities/index.ts`.
+- Migrations: `packages/db/src/migrations/` (TypeScript, generated by the MikroORM CLI, committed to git).
+- The CLI config is `packages/db/src/mikro-orm.config.ts`. It shares the runtime options from `config.ts` and adds the Migrator.
+- Workflow: change an entity → `npm run db:migration:create` → review the file → `npm run db:migrate`.
+
+### Frontend vs. backend UI
+
+The public site and the admin backend are separate route groups with their own root layouts and stylesheets:
+
+- `(frontend)`: `frontend.css` contains Tailwind only. Pages use utility classes directly.
+- `(backend)`: `backend.css` contains Tailwind plus the shadcn theme from `@devmentor/ui/styles.css`. Pages compose shadcn primitives from `@devmentor/ui/components/ui/*` and the shared building blocks from `@devmentor/ui/backend/*`.
+
+To add more shadcn components, run `npx shadcn@latest add <component>` inside `packages/ui`.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | (required) | PostgreSQL connection string |
+| `DATABASE_POOL_MIN` | `0` | Minimum pooled connections per process |
+| `DATABASE_POOL_MAX` | `10` | Maximum pooled connections per process |
+| `DATABASE_DEBUG` | `false` | Log SQL queries |
+
+All `.env*` files live in the repository root and are loaded for both Next.js and the MikroORM CLI.
+
+## Working with AI coding agents
+
+Agent rules live in [`AGENTS.md`](AGENTS.md); `CLAUDE.md` includes it. Specs, run logs and lessons learned are kept in [`.ai/`](.ai).
