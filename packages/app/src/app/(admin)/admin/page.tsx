@@ -5,7 +5,7 @@ export const metadata = { title: "Dashboard" };
 
 // Static shell: data comes from /api/* through apiCall, so the page needs no
 // database at build time.
-export default function BackendDashboardPage() {
+export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>

@@ -24,9 +24,9 @@ describe("home page", () => {
   });
 
   it("links to the admin panel", async () => {
-    await browser.clickLink("Open the backend");
-    await browser.waitForUrl("**/backend");
-    assert.equal(new URL(await browser.url()).pathname, "/backend");
-    assert.equal(await browser.title(), "Dashboard · DevMentor backend");
+    await browser.clickLink("Open the admin panel");
+    await browser.waitForUrl("**/admin");
+    assert.equal(new URL(await browser.url()).pathname, "/admin");
+    assert.equal(await browser.title(), "Dashboard · DevMentor admin");
   });
 });

@@ -1,20 +1,20 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import BackendLayout, { metadata } from "./layout.tsx";
+import AdminLayout, { metadata } from "./layout.tsx";
 
-describe("BackendLayout", () => {
-  it("renders the backend shell around its children", () => {
+describe("AdminLayout", () => {
+  it("renders the admin shell around its children", () => {
     const html = renderToStaticMarkup(
-      <BackendLayout>
+      <AdminLayout>
         <p>page content</p>
-      </BackendLayout>,
+      </AdminLayout>,
     );
     expect(html).toContain('<html lang="en">');
-    expect(html).toContain('href="/backend"');
+    expect(html).toContain('href="/admin"');
     expect(html).toContain("View site");
     expect(html).toContain('href="/"');
     expect(html).toContain("<p>page content</p>");
-    expect(metadata.title).toEqual({ default: "DevMentor backend", template: "%s · DevMentor backend" });
+    expect(metadata.title).toEqual({ default: "DevMentor admin", template: "%s · DevMentor admin" });
   });
 });

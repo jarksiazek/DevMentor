@@ -21,7 +21,7 @@ DevMentor is an npm-workspaces monorepo. These decisions are fixed; changing any
 | ORM / migrations | MikroORM 7 (`@mikro-orm/postgresql`, `@mikro-orm/migrations`) | Prisma, Drizzle, raw `pg` pools, `synchronize`-style schema updates |
 | Dependency injection | Awilix (`@devmentor/core` container) | Module-level service singletons, other DI libs |
 | Frontend (public) pages | Tailwind CSS 4 utilities | CSS-in-JS, other CSS frameworks |
-| Backend (admin) pages | shadcn-ui components from `@devmentor/ui` | Other component libraries |
+| Admin pages | shadcn-ui components from `@devmentor/ui` | Other component libraries |
 | Package manager | npm workspaces (`packages/*`) | pnpm/yarn, nested lockfiles |
 | Tests | Vitest + `@vitest/coverage-v8`, Testing Library (`jsdom`); integration: `@testcontainers/postgresql` + `agent-browser` | Jest, `node:test`, Playwright/Cypress runners |
 
@@ -60,7 +60,7 @@ TypeScript is pinned to `~6.0.x` because typescript-eslint supports `<6.1.0`. Do
 ## UI and routing
 
 - Public pages live in `packages/app/src/app/(frontend)/` and use plain Tailwind utilities. Their root layout imports `frontend.css`.
-- Admin pages live in `packages/app/src/app/(backend)/backend/` (URL `/backend/...`) and use `@devmentor/ui/components/ui/*` and `@devmentor/ui/backend/*`. Their root layout imports `backend.css` (Tailwind plus the shadcn theme). Don't use shadcn components in frontend pages.
+- Admin pages live in `packages/app/src/app/(admin)/admin/` (URL `/admin/...`) and use `@devmentor/ui/components/ui/*` and `@devmentor/ui/backend/*`. Their root layout imports `admin.css` (Tailwind plus the shadcn theme). Don't use shadcn components in frontend pages.
 - The two groups have separate root layouts, so navigating between them reloads the page. That's intended.
 - Add shadcn components from `packages/ui`: `npx shadcn@latest add <component>`. They land in `src/components/ui/` and are never hand-written. Afterwards, check that the new files import `cn` from `@devmentor/ui/lib/utils`. The CLI sometimes rewrites it to the npm package `cn`, which is wrong.
 - API endpoints are Route Handlers under `packages/app/src/app/api/<concept>/`.
@@ -75,7 +75,7 @@ Domain code is not organized into `modules/`. Each concept (`auth`, `mentors`, `
 - `packages/app/src/app/api/<concept>/route.ts` (collection) and `api/<concept>/[id]/route.ts` (item), plus the matching pages
 - `packages/ui/src/components/<concept>/` for components shared across pages
 
-Create a concept folder only when its first file is added. Never scaffold empty folders. This is a directory convention, not a module runtime: there is no per-concept setup, ACL or auto-discovery. The reference example is the `auth` concept (`User`, `UserService`, `/api/users`, `/backend`).
+Create a concept folder only when its first file is added. Never scaffold empty folders. This is a directory convention, not a module runtime: there is no per-concept setup, ACL or auto-discovery. The reference example is the `auth` concept (`User`, `UserService`, `/api/users`, `/admin`).
 
 Event IDs follow `concept.entity.action` in the past tense (e.g. `auth.user.created`). Declare each one in `core/src/events/event-map.ts`, emit it through the `eventBus` cradle singleton after the mutation has been flushed, and wire listeners in `events/subscribers.ts`. Events are in-process only; there is no queue or worker.
 

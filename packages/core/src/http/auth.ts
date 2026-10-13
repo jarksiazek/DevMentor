@@ -15,7 +15,7 @@ const DEVELOPMENT_SESSION: Session = { userId: null, roles: ["admin"] };
  *
  * There is no auth concept yet, so this fails closed: production always answers
  * 401. Outside production it returns an admin session without an identity so the
- * backend works locally. Replace the body once the auth concept (JWT cookie) lands.
+ * admin panel works locally. Replace the body once the auth concept (JWT cookie) lands.
  */
 export async function requireSession(request: Request): Promise<Session> {
   void request;
